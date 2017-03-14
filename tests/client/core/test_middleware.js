@@ -225,6 +225,13 @@ describe('Trailing Slashes Middleware', () => {
     };
     fakeConfig = new Map();
     fakeConfig.set('enableTrailingSlashesMiddleware', true);
+    fakeConfig.set('validClientApplications', ['firefox']);
+    fakeConfig.set('validTrailingSlashUrlExceptions', [
+      '/$lang/no/trailing',
+      '/$clientApp/no/trailing',
+      '/$lang/$clientApp/no/trailing',
+      '/no/trailing',
+    ]);
   });
 
   it('should call next and do nothing with a valid, trailing slash URL', () => {
@@ -246,6 +253,50 @@ describe('Trailing Slashes Middleware', () => {
       fakeReq, fakeRes, fakeNext, { _config: fakeConfig });
     assert.deepEqual(fakeRes.redirect.firstCall.args, [301, '/foo/bar/']);
     assert.notOk(fakeNext.called);
+  });
+
+  it('should not add trailing slashes if the URL has an exception', () => {
+    const fakeReq = {
+      originalUrl: '/no/trailing',
+      headers: {},
+    };
+    trailingSlashesMiddleware(
+      fakeReq, fakeRes, fakeNext, { _config: fakeConfig });
+    assert.notOk(fakeRes.redirect.called);
+    assert.ok(fakeNext.called);
+  });
+
+  it('should handle trailing slash exceptions with $lang', () => {
+    const fakeReq = {
+      originalUrl: '/en-US/no/trailing',
+      headers: {},
+    };
+    trailingSlashesMiddleware(
+      fakeReq, fakeRes, fakeNext, { _config: fakeConfig });
+    assert.notOk(fakeRes.redirect.called);
+    assert.ok(fakeNext.called);
+  });
+
+  it('should handle trailing slash exceptions with $clientApp', () => {
+    const fakeReq = {
+      originalUrl: '/firefox/no/trailing',
+      headers: {},
+    };
+    trailingSlashesMiddleware(
+      fakeReq, fakeRes, fakeNext, { _config: fakeConfig });
+    assert.notOk(fakeRes.redirect.called);
+    assert.ok(fakeNext.called);
+  });
+
+  it('should handle trailing slash exceptions with $lang/$clientApp', () => {
+    const fakeReq = {
+      originalUrl: '/fr/firefox/no/trailing',
+      headers: {},
+    };
+    trailingSlashesMiddleware(
+      fakeReq, fakeRes, fakeNext, { _config: fakeConfig });
+    assert.notOk(fakeRes.redirect.called);
+    assert.ok(fakeNext.called);
   });
 
   it('should include query params in the redirect', () => {
